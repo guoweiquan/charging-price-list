@@ -1,0 +1,120 @@
+
+.container.data-v-eca06f3c {
+		position: relative;
+		min-height: 100vh;
+		display: flex;
+		flex-direction: column;
+}
+
+	/* Header 标题栏内容 */
+.custom-header.data-v-eca06f3c {
+		height: 11.7vw;
+		padding-top: calc(var(--status-bar-height) + 35rpx);
+		display: flex;
+		align-items: center;
+		padding-left: 4vw;
+		padding-right: 4vw;
+		z-index: 10;
+}
+.back-btn.data-v-eca06f3c {
+		display: flex;
+		align-items: center;
+		padding: 2.6vw;
+		justify-content: center;
+}
+.back-icon.data-v-eca06f3c {
+		font-size: 5.83vw;
+		color: #FFFFFF;
+		text-shadow: 0 4rpx 8rpx rgba(0,0,0,0.8);
+		font-weight: bold;
+}
+
+	/* 调整第二层页面标题文字颜色、大小和字体 */
+.header-title.data-v-eca06f3c {
+		flex: 1;
+		text-align: center;
+		color: #FFD700;
+		font-size: 6.28vw;
+		font-weight: bold;
+		margin-right: 10.6vw;
+		text-shadow: 0 4rpx 8rpx rgba(0,0,0,0.8);
+		letter-spacing: 1rpx;
+}
+
+	/* List */
+.list-container.data-v-eca06f3c {
+		flex: 1;
+		padding: 6vw 4vw 4vw 4vw;
+		padding-bottom: 8vw;
+}
+.list-item.data-v-eca06f3c {
+		margin-bottom: 2vw;
+		padding: 2.6vw;
+		background: transparent;
+		border: none;
+		box-shadow: none;
+		transition: all 0.3s ease;
+		position: relative;
+		overflow: visible;
+}
+.list-item.playing.data-v-eca06f3c {
+		background: transparent;
+		transform: scale(1.02);
+		text-shadow: 0 0 20rpx rgba(255, 69, 0, 0.6); /* Glow effect when playing */
+}
+.list-item.played.data-v-eca06f3c {
+		border-color: transparent;
+}
+.text-content.data-v-eca06f3c {
+		font-size: 4.98vw;
+		line-height: 1.3;
+		word-break: break-all;
+		font-weight: 600;
+		text-shadow: 0 4rpx 8rpx rgba(0,0,0,0.9);
+		color: #FFFFFF;
+		letter-spacing: -2rpx;
+}
+.char-span.data-v-eca06f3c {
+		display: inline-block;
+		margin-right: -1rpx;
+		transition: color 0.1s linear;
+}
+	
+	/* Colors */
+.text-gold.data-v-eca06f3c { color: #FFFFFF;
+} /* Normal text is now white */
+.text-orange.data-v-eca06f3c { color: #FFD700;
+} /* Highlight/Played text is Gold/Orange */
+.char-span.data-v-eca06f3c:last-child { margin-right: 0;
+}
+
+	/* Audio Wave Animation */
+.audio-wave.data-v-eca06f3c {
+		position: absolute;
+		right: 30rpx;
+		bottom: 20rpx;
+		display: flex;
+		gap: 6rpx;
+		align-items: flex-end;
+		height: 30rpx;
+}
+.bar.data-v-eca06f3c {
+		width: 6rpx;
+		background-color: #FFD700; /* Changed to Gold to match highlight */
+		animation: wave-eca06f3c 1s infinite ease-in-out;
+}
+.bar.data-v-eca06f3c:nth-child(1) { height: 40%; animation-delay: 0s;
+}
+.bar.data-v-eca06f3c:nth-child(2) { height: 80%; animation-delay: 0.2s;
+}
+.bar.data-v-eca06f3c:nth-child(3) { height: 60%; animation-delay: 0.4s;
+}
+@keyframes wave-eca06f3c {
+0%, 100% { height: 20%; opacity: 0.5;
+}
+50% { height: 100%; opacity: 1;
+}
+}
+.footer-spacer.data-v-eca06f3c {
+		height: 100rpx;
+}
