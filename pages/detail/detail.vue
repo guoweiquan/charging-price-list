@@ -1,77 +1,135 @@
 <template>
 	<view class="container">
-		<!-- Background Image -->
-		<image class="bg-image full-screen-bg" src="/static/images/浙江中税背景_9比16.jpg" mode="aspectFill"></image>
-		
-		<!-- Custom Header -->
+		<view class="bg-layer"></view>
+		<view class="bg-glow bg-glow-top"></view>
+		<view class="bg-glow bg-glow-bottom"></view>
+
 		<view class="custom-header">
 			<view class="back-btn" @click="goBack">
-				<!-- Replaced text with icon -->
-				<text class="back-icon">❮</text> 
+				<text class="back-icon">‹</text>
 			</view>
-			<text class="header-title">{{ pageTitle }}</text>
+			<!-- <text class="header-title">{{ pageTitle }}</text>  -->
 		</view>
 
-		<!-- Content List -->
-		<scroll-view scroll-y="true" class="list-container">
-			<view 
-				v-for="(item, index) in listItems" 
-				:key="index"
-				class="list-item glass-card"
-				:class="{ 'playing': currentPlayingIndex === index, 'played': item.status === 'played' }"
-				@click="playItem(index)"
-			>
-				<view class="text-content">
-					<text 
-						v-for="(char, charIndex) in item.chars" 
-						:key="charIndex"
-						class="char-span"
-						:class="getCharClass(index, charIndex)"
-					>{{ char }}</text>
-				</view>
-				
-				<!-- Visual Indicator for Audio -->
-				<view v-if="currentPlayingIndex === index" class="audio-wave">
-					<view class="bar"></view>
-					<view class="bar"></view>
-					<view class="bar"></view>
+		<scroll-view scroll-y class="page-scroll">
+			<view class="hero-card">
+				<view class="hero-icon">📑</view>
+				<text class="hero-title">{{ pageTitle }}</text>
+				<text class="hero-desc">{{ heroSubtitle }}</text>
+			</view>
+
+			<!-- <view class="section-title">
+				<view class="section-dot"></view>
+				<text>收费标准明细</text>
+			</view> -->
+
+			<view class="table-card">
+				<view class="table-row table-head">
+				<text class="col-name">{{ leftHeaderTitle }}</text>
+				<text class="col-price">收费标准</text>
+			</view>
+
+				<view
+					v-for="(row, index) in displayRows"
+					:key="index"
+					class="table-row"
+					:class="{ playing: currentPlayingIndex === index, played: row.status === 'played' }"
+					@click="playItem(index)"
+				>
+					<text class="col-name">{{ row.name }}</text>
+					<text class="col-price">{{ row.price }}</text>
 				</view>
 			</view>
-			
+
 			<view class="footer-spacer"></view>
 		</scroll-view>
 	</view>
 </template>
 
 <script setup>
-	import { ref, onMounted, onUnmounted } from 'vue';
+	import { ref, computed, onUnmounted } from 'vue';
 	import { onLoad } from '@dcloudio/uni-app';
 	import { priceList } from '../../common/data.js';
 
 	const categoryId = ref('');
 	const pageTitle = ref('');
 	const listItems = ref([]);
-	
-	// Audio State
 	const currentPlayingIndex = ref(-1);
-	const currentCharIndex = ref(-1);
-	let audioContext = null;
-	let progressTimer = null;
 
-	onLoad((options) => {
-		if (options.id) {
-			categoryId.value = options.id;
-			const categoryData = priceList.find(c => c.id === options.id);
-			if (categoryData) {
-				pageTitle.value = categoryData.title || categoryData.category;
-				// Pre-process items for character splitting
-				listItems.value = categoryData.items.map(item => ({
-					originalText: item.text,
-					chars: item.text.split(''),
-					status: 'idle' // idle, playing, played
-				}));
+	let audioContext = null;
+	let simulateTimer = null;
+
+	const subtitleMap = {
+		yiban: '根据企业年开票金额分档收费，透明定价，专业服务',
+		xiaoguimo: '小规模企业专属标准，灵活收费，服务清晰',
+		guishang: '规上企业专项服务，按业务场景精准报价',
+		gaoxin: '高新认定配套服务，聚焦效率与通过率',
+		chukou: '出口申报服务，流程规范，保障合规申报',
+		kaipiao: '开票服务方案，按企业类型分类收费',
+		mianfei: '基础配套服务项目，覆盖企业高频需求'
+	};
+
+	const heroSubtitle = computed(() => subtitleMap[categoryId.value] || '企业服务收费明细');
+
+	const leftHeaderTitle = computed(() => {
+		const projectIds = ['guishang', 'chukou', 'kaipiao', 'mianfei'];
+		return projectIds.includes(categoryId.value) ? '申报项目' : '年开票金额';
+	});
+
+	const formatPrice = (priceText) => {
+		const text = (priceText || '').trim();
+		if (!text) return '详询';
+		if (text.includes('面议')) return '面议';
+		if (/^¥/.test(text)) return text;
+		if (/^\d/.test(text)) return `¥${text}`;
+		if (/^\d+元/.test(text)) return `¥${text.replace('元', '')}`;
+		return text;
+	};
+
+	const parseRow = (rawText) => {
+		const text = (rawText || '').replace(/：/g, ':').trim();
+		const parts = text.split(/[，,]/).map((item) => item.trim()).filter(Boolean);
+
+		let name = text;
+		let price = '详询';
+
+		if (parts.length >= 2) {
+			name = parts[0].replace(/^年开票金额\s*:?\s*/, '').replace(/间$/, '').trim();
+			price = parts.slice(1).join(' / ');
+		} else if (/^年开票金额/.test(text)) {
+			name = text.replace(/^年开票金额\s*:?\s*/, '').replace(/间$/, '').trim();
+		} else {
+			const match = text.match(/(\d+(?:\.\d+)?\s*元\/(?:月|年|次)|面议)/);
+			if (match) {
+				price = match[1];
+				name = text.replace(match[1], '').replace(/加/g, '').replace(/[，,]$/, '').trim();
 			}
 		}
+
+		return {
+			name: name || '服务项目',
+			price: formatPrice(price)
+		};
+	};
+
+	const displayRows = computed(() =>
+		listItems.value.map((item) => ({
+			...parseRow(item.text),
+			status: item.status
+		}))
+	);
+
+	onLoad((options) => {
+		if (!options.id) return;
+		categoryId.value = options.id;
+		const categoryData = priceList.find((c) => c.id === options.id);
+		if (!categoryData) return;
+
+		pageTitle.value = categoryData.title || categoryData.category;
+		listItems.value = categoryData.items.map((item) => ({
+			text: item.text,
+			status: 'idle'
+		}));
 	});
 
 	onUnmounted(() => {
@@ -83,250 +141,272 @@
 		uni.navigateBack();
 	};
 
-	const getCharClass = (itemIndex, charIndex) => {
-		const item = listItems.value[itemIndex];
-		
-		if (item.status === 'played') {
-			return 'text-orange';
-		}
-		
-		if (itemIndex === currentPlayingIndex.value) {
-			if (charIndex <= currentCharIndex.value) {
-				return 'text-orange';
-			}
-			return 'text-gold';
-		}
-		
-		return 'text-gold'; // Default
-	};
-
-	const stopAudio = () => {
+	const clearAudioContext = () => {
 		if (audioContext) {
 			audioContext.stop();
 			audioContext.destroy();
 			audioContext = null;
 		}
-		if (progressTimer) {
-			clearInterval(progressTimer);
-			progressTimer = null;
-		}
-		
-		// If something was playing, mark it as idle (or played? User interrupted, so maybe idle)
-		if (currentPlayingIndex.value !== -1) {
-			// Reset the interrupted item to idle, or keep as is? 
-			// Design says "打断/切换", implying new one starts. Old one stops.
-			// Let's reset the old one to 'idle' so it can be played again from start.
-			// Or mark as 'played'? Usually 'played' means finished.
-			listItems.value[currentPlayingIndex.value].status = 'idle'; 
-			currentPlayingIndex.value = -1;
-			currentCharIndex.value = -1;
+		if (simulateTimer) {
+			clearTimeout(simulateTimer);
+			simulateTimer = null;
 		}
 	};
 
+	const stopAudio = () => {
+		if (currentPlayingIndex.value !== -1 && listItems.value[currentPlayingIndex.value]) {
+			listItems.value[currentPlayingIndex.value].status = 'idle';
+		}
+		currentPlayingIndex.value = -1;
+		clearAudioContext();
+	};
+
+	const markPlayed = (index) => {
+		if (listItems.value[index]) {
+			listItems.value[index].status = 'played';
+		}
+		currentPlayingIndex.value = -1;
+		clearAudioContext();
+	};
+
+	const simulatePlayback = (index) => {
+		simulateTimer = setTimeout(() => {
+			markPlayed(index);
+		}, 1200);
+	};
+
 	const playItem = (index) => {
-		// Stop any current playback
 		if (currentPlayingIndex.value === index) {
-			// Toggle pause? Or restart? Design says "click to play", usually restart if already playing or ignore?
-			// Let's restart.
 			stopAudio();
-		} else {
-			stopAudio();
+			return;
 		}
 
+		stopAudio();
 		currentPlayingIndex.value = index;
-		currentCharIndex.value = -1;
 		listItems.value[index].status = 'playing';
 
-		// Create Audio Context
 		audioContext = uni.createInnerAudioContext();
-		// Path strategy: /static/audio/{categoryId}_{index}.mp3 (0-based index)
-		// e.g. /static/audio/yiban_0.mp3
-		const audioSrc = `/static/audio/${categoryId.value}_${index}.mp3`;
-		audioContext.src = audioSrc;
-		
-		audioContext.onPlay(() => {
-			console.log('Audio started:', audioSrc);
-		});
-		
-		audioContext.onTimeUpdate(() => {
-			if (!audioContext) return;
-			const duration = audioContext.duration || 0;
-			const currentTime = audioContext.currentTime || 0;
-			
-			if (duration > 0) {
-				const progress = currentTime / duration;
-				const totalChars = listItems.value[index].chars.length;
-				// Calculate char index based on progress
-				const newCharIndex = Math.floor(progress * totalChars);
-				if (newCharIndex > currentCharIndex.value) {
-					currentCharIndex.value = newCharIndex;
-				}
-			}
-		});
+		audioContext.src = `/static/audio/${categoryId.value}_${index}.mp3`;
 
 		audioContext.onEnded(() => {
-			console.log('Audio ended');
-			// Mark as fully played
-			listItems.value[index].status = 'played';
-			currentPlayingIndex.value = -1;
-			currentCharIndex.value = -1;
-			stopAudio(); // Cleanup
+			markPlayed(index);
 		});
 
-		audioContext.onError((res) => {
-			console.warn('Audio error (file missing?):', res);
-			// Fallback Simulation for Demo
+		audioContext.onError(() => {
 			simulatePlayback(index);
 		});
 
 		audioContext.play();
 	};
-
-	const simulatePlayback = (index) => {
-		// If audio file is missing, simulate the karaoke effect
-		console.log('Simulating playback...');
-		const totalChars = listItems.value[index].chars.length;
-		const duration = Math.min(Math.max(totalChars * 200, 2000), 10000); // 200ms per char, min 2s, max 10s
-		const interval = duration / totalChars;
-		
-		let step = 0;
-		progressTimer = setInterval(() => {
-			step++;
-			currentCharIndex.value = step;
-			
-			if (step >= totalChars) {
-				// Finished
-				listItems.value[index].status = 'played';
-				currentPlayingIndex.value = -1;
-				currentCharIndex.value = -1;
-				if (progressTimer) clearInterval(progressTimer);
-			}
-		}, interval);
-	};
-
 </script>
+
 
 <style scoped>
 	.container {
 		position: relative;
 		min-height: 100vh;
-		display: flex;
-		flex-direction: column;
+		background: linear-gradient(180deg, #0a1628 0%, #0d2137 30%, #0f2b4a 100%);
+		overflow: hidden;
 	}
 
-	/* Header 标题栏内容 */
+	.bg-layer,
+	.bg-glow {
+		position: absolute;
+		pointer-events: none;
+	}
+
+	.bg-layer {
+		inset: 0;
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.03) 100%);
+	}
+
+	.bg-glow {
+		filter: blur(40rpx);
+		border-radius: 999rpx;
+		opacity: 0.75;
+	}
+
+	.bg-glow-top {
+		width: 360rpx;
+		height: 360rpx;
+		right: -120rpx;
+		top: 100rpx;
+		background: rgba(64, 150, 255, 0.16);
+	}
+
+	.bg-glow-bottom {
+		width: 420rpx;
+		height: 420rpx;
+		left: -180rpx;
+		bottom: 120rpx;
+		background: rgba(22, 119, 255, 0.05);
+	}
+
 	.custom-header {
-		height: 11.7vw;
-		padding-top: calc(var(--status-bar-height) + 35rpx);
+		position: relative;
+		z-index: 2;
 		display: flex;
 		align-items: center;
-		padding-left: 4vw;
-		padding-right: 4vw;
-		z-index: 10;
+		padding: calc(var(--status-bar-height) + 20rpx) 30rpx 22rpx;
+		gap: 14rpx;
 	}
 
 	.back-btn {
+		width: 64rpx;
+		height: 64rpx;
+		border-radius: 18rpx;
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid rgba(255, 255, 255, 0.1);
 		display: flex;
 		align-items: center;
-		padding: 2.6vw;
 		justify-content: center;
 	}
 
-	.back-icon {
-		font-size: 5.83vw;
-		color: #FFFFFF;
-		text-shadow: 0 4rpx 8rpx rgba(0,0,0,0.8);
-		font-weight: bold;
-	}
+	/* .back-icon {
+		width: 20rpx;
+		height: 20rpx;
+		border-left: 4rpx solid #ffffff;
+		border-bottom: 4rpx solid #ffffff;
+		transform: rotate(45deg);
+		margin-left: 6rpx;
+	} */
+	 .back-icon {
+		font-size: 56rpx;
+		line-height: 1;
+		color: #ffffff;
+		font-weight: 900;
+		}
 
-	/* 调整第二层页面标题文字颜色、大小和字体 */
+	.back-btn {
+		-webkit-tap-highlight-color: transparent;
+		}
+
+
+
 	.header-title {
 		flex: 1;
 		text-align: center;
-		color: #FFD700;
-		font-size: 6.28vw;
-		font-weight: bold;
-		margin-right: 10.6vw;
-		text-shadow: 0 4rpx 8rpx rgba(0,0,0,0.8);
+		font-size: 34rpx;
+		font-weight: 700;
 		letter-spacing: 1rpx;
+		color: #ffffff;
+		margin-right: 78rpx;
 	}
 
-	/* List */
-	.list-container {
-		flex: 1;
-		padding: 6vw 4vw 4vw 4vw;
-		padding-bottom: 8vw;
-	}
-
-	.list-item {
-		margin-bottom: 2vw;
-		padding: 2.6vw;
-		background: transparent;
-		border: none;
-		box-shadow: none;
-		transition: all 0.3s ease;
+	.page-scroll {
 		position: relative;
-		overflow: visible;
+		z-index: 2;
+		height: calc(100vh - var(--status-bar-height) - 106rpx);
+		padding: 6rpx 30rpx 30rpx;
+		box-sizing: border-box;
 	}
 
-	.list-item.playing {
-		background: transparent;
-		transform: scale(1.02);
-		text-shadow: 0 0 20rpx rgba(255, 69, 0, 0.6); /* Glow effect when playing */
+	.hero-card {
+		background: linear-gradient(135deg, rgba(64, 150, 255, 0.18), rgba(22, 119, 255, 0.06));
+		border: 1px solid rgba(64, 150, 255, 0.15);
+		border-radius: 24rpx;
+		padding: 34rpx 30rpx;
+		margin-bottom: 30rpx;
 	}
 
-	.list-item.played {
-		border-color: transparent;
+	.hero-icon {
+		font-size: 54rpx;
+		margin-bottom: 10rpx;
 	}
 
-	.text-content {
-		font-size: 4.98vw;
-		line-height: 1.3;
-		word-break: break-all;
-		font-weight: 600;
-		text-shadow: 0 4rpx 8rpx rgba(0,0,0,0.9);
-		color: #FFFFFF;
-		letter-spacing: -2rpx;
+	.hero-title {
+		display: block;
+		font-size: 44rpx;
+		font-weight: 800;
+		margin-bottom: 10rpx;
+		color: #ffffff;
 	}
 
-	.char-span {
-		display: inline-block;
-		margin-right: -1rpx;
-		transition: color 0.1s linear;
+	.hero-desc {
+		display: block;
+		font-size: 24rpx;
+		line-height: 1.6;
+		color: rgba(255, 255, 255, 0.72);
 	}
-	
-	/* Colors */
-	.text-gold { color: #FFFFFF; } /* Normal text is now white */
-	.text-orange { color: #FFD700; } /* Highlight/Played text is Gold/Orange */
-	.char-span:last-child { margin-right: 0; }
 
-	/* Audio Wave Animation */
-	.audio-wave {
-		position: absolute;
-		right: 30rpx;
-		bottom: 20rpx;
+	.section-title {
 		display: flex;
-		gap: 6rpx;
-		align-items: flex-end;
-		height: 30rpx;
+		align-items: center;
+		gap: 10rpx;
+		font-size: 30rpx;
+		font-weight: 600;
+		color: rgba(255, 255, 255, 0.9);
+		margin-bottom: 16rpx;
+		padding-left: 2rpx;
 	}
 
-	.bar {
-		width: 6rpx;
-		background-color: #FFD700; /* Changed to Gold to match highlight */
-		animation: wave 1s infinite ease-in-out;
+	.section-dot {
+		width: 10rpx;
+		height: 10rpx;
+		border-radius: 50%;
+		background: #4096ff;
 	}
 
-	.bar:nth-child(1) { height: 40%; animation-delay: 0s; }
-	.bar:nth-child(2) { height: 80%; animation-delay: 0.2s; }
-	.bar:nth-child(3) { height: 60%; animation-delay: 0.4s; }
-
-	@keyframes wave {
-		0%, 100% { height: 20%; opacity: 0.5; }
-		50% { height: 100%; opacity: 1; }
+	.table-card {
+		border-radius: 20rpx;
+		overflow: hidden;
+		background: rgba(255, 255, 255, 0.045);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 	}
-	
+
+	.table-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 24rpx 24rpx;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+	}
+
+	.table-row:last-child {
+		border-bottom: none;
+	}
+
+	.table-head {
+		background: rgba(64, 150, 255, 0.08);
+	}
+
+	.table-head .col-name,
+	.table-head .col-price {
+		font-size: 33rpx;
+		font-weight: 700;
+		color: rgba(255, 255, 255, 0.72);
+	}
+
+	.col-name {
+		flex: 1;
+		font-size: 30rpx;
+		line-height: 1.4;
+		font-weight: 600;
+		color: #f2f7ff;
+		padding-right: 14rpx;
+	}
+
+	.col-price {
+		font-size: 30rpx;
+		font-weight: 700;
+		line-height: 1.2;
+		color: #2f9dff;
+		white-space: nowrap;
+	}
+
+	.table-row.playing {
+		background: rgba(64, 150, 255, 0.08);
+	}
+
+	.table-row.played .col-name {
+		color: rgba(255, 255, 255, 0.72);
+	}
+
+	.table-row.played .col-price {
+		color: #7db8ff;
+	}
+
 	.footer-spacer {
-		height: 100rpx;
+		height: 46rpx;
 	}
 </style>

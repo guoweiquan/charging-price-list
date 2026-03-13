@@ -1,6 +1,5 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const common_assets = require("../../common/assets.js");
 const common_data = require("../../common/data.js");
 const _sfc_main = {
   __name: "detail",
@@ -9,23 +8,76 @@ const _sfc_main = {
     const pageTitle = common_vendor.ref("");
     const listItems = common_vendor.ref([]);
     const currentPlayingIndex = common_vendor.ref(-1);
-    const currentCharIndex = common_vendor.ref(-1);
     let audioContext = null;
-    let progressTimer = null;
-    common_vendor.onLoad((options) => {
-      if (options.id) {
-        categoryId.value = options.id;
-        const categoryData = common_data.priceList.find((c) => c.id === options.id);
-        if (categoryData) {
-          pageTitle.value = categoryData.title || categoryData.category;
-          listItems.value = categoryData.items.map((item) => ({
-            originalText: item.text,
-            chars: item.text.split(""),
-            status: "idle"
-            // idle, playing, played
-          }));
+    let simulateTimer = null;
+    const subtitleMap = {
+      yiban: "根据企业年开票金额分档收费，透明定价，专业服务",
+      xiaoguimo: "小规模企业专属标准，灵活收费，服务清晰",
+      guishang: "规上企业专项服务，按业务场景精准报价",
+      gaoxin: "高新认定配套服务，聚焦效率与通过率",
+      chukou: "出口申报服务，流程规范，保障合规申报",
+      kaipiao: "开票服务方案，按企业类型分类收费",
+      mianfei: "基础配套服务项目，覆盖企业高频需求"
+    };
+    const heroSubtitle = common_vendor.computed(() => subtitleMap[categoryId.value] || "企业服务收费明细");
+    const leftHeaderTitle = common_vendor.computed(() => {
+      const projectIds = ["guishang", "chukou", "kaipiao", "mianfei"];
+      return projectIds.includes(categoryId.value) ? "申报项目" : "年开票金额";
+    });
+    const formatPrice = (priceText) => {
+      const text = (priceText || "").trim();
+      if (!text)
+        return "详询";
+      if (text.includes("面议"))
+        return "面议";
+      if (/^¥/.test(text))
+        return text;
+      if (/^\d/.test(text))
+        return `¥${text}`;
+      if (/^\d+元/.test(text))
+        return `¥${text.replace("元", "")}`;
+      return text;
+    };
+    const parseRow = (rawText) => {
+      const text = (rawText || "").replace(/：/g, ":").trim();
+      const parts = text.split(/[，,]/).map((item) => item.trim()).filter(Boolean);
+      let name = text;
+      let price = "详询";
+      if (parts.length >= 2) {
+        name = parts[0].replace(/^年开票金额\s*:?\s*/, "").replace(/间$/, "").trim();
+        price = parts.slice(1).join(" / ");
+      } else if (/^年开票金额/.test(text)) {
+        name = text.replace(/^年开票金额\s*:?\s*/, "").replace(/间$/, "").trim();
+      } else {
+        const match = text.match(/(\d+(?:\.\d+)?\s*元\/(?:月|年|次)|面议)/);
+        if (match) {
+          price = match[1];
+          name = text.replace(match[1], "").replace(/加/g, "").replace(/[，,]$/, "").trim();
         }
       }
+      return {
+        name: name || "服务项目",
+        price: formatPrice(price)
+      };
+    };
+    const displayRows = common_vendor.computed(
+      () => listItems.value.map((item) => ({
+        ...parseRow(item.text),
+        status: item.status
+      }))
+    );
+    common_vendor.onLoad((options) => {
+      if (!options.id)
+        return;
+      categoryId.value = options.id;
+      const categoryData = common_data.priceList.find((c) => c.id === options.id);
+      if (!categoryData)
+        return;
+      pageTitle.value = categoryData.title || categoryData.category;
+      listItems.value = categoryData.items.map((item) => ({
+        text: item.text,
+        status: "idle"
+      }));
     });
     common_vendor.onUnmounted(() => {
       stopAudio();
@@ -34,116 +86,69 @@ const _sfc_main = {
       stopAudio();
       common_vendor.index.navigateBack();
     };
-    const getCharClass = (itemIndex, charIndex) => {
-      const item = listItems.value[itemIndex];
-      if (item.status === "played") {
-        return "text-orange";
-      }
-      if (itemIndex === currentPlayingIndex.value) {
-        if (charIndex <= currentCharIndex.value) {
-          return "text-orange";
-        }
-        return "text-gold";
-      }
-      return "text-gold";
-    };
-    const stopAudio = () => {
+    const clearAudioContext = () => {
       if (audioContext) {
         audioContext.stop();
         audioContext.destroy();
         audioContext = null;
       }
-      if (progressTimer) {
-        clearInterval(progressTimer);
-        progressTimer = null;
+      if (simulateTimer) {
+        clearTimeout(simulateTimer);
+        simulateTimer = null;
       }
-      if (currentPlayingIndex.value !== -1) {
+    };
+    const stopAudio = () => {
+      if (currentPlayingIndex.value !== -1 && listItems.value[currentPlayingIndex.value]) {
         listItems.value[currentPlayingIndex.value].status = "idle";
-        currentPlayingIndex.value = -1;
-        currentCharIndex.value = -1;
       }
+      currentPlayingIndex.value = -1;
+      clearAudioContext();
+    };
+    const markPlayed = (index) => {
+      if (listItems.value[index]) {
+        listItems.value[index].status = "played";
+      }
+      currentPlayingIndex.value = -1;
+      clearAudioContext();
+    };
+    const simulatePlayback = (index) => {
+      simulateTimer = setTimeout(() => {
+        markPlayed(index);
+      }, 1200);
     };
     const playItem = (index) => {
       if (currentPlayingIndex.value === index) {
         stopAudio();
-      } else {
-        stopAudio();
+        return;
       }
+      stopAudio();
       currentPlayingIndex.value = index;
-      currentCharIndex.value = -1;
       listItems.value[index].status = "playing";
       audioContext = common_vendor.index.createInnerAudioContext();
-      const audioSrc = `/static/audio/${categoryId.value}_${index}.mp3`;
-      audioContext.src = audioSrc;
-      audioContext.onPlay(() => {
-        common_vendor.index.__f__("log", "at pages/detail/detail.vue:148", "Audio started:", audioSrc);
-      });
-      audioContext.onTimeUpdate(() => {
-        if (!audioContext)
-          return;
-        const duration = audioContext.duration || 0;
-        const currentTime = audioContext.currentTime || 0;
-        if (duration > 0) {
-          const progress = currentTime / duration;
-          const totalChars = listItems.value[index].chars.length;
-          const newCharIndex = Math.floor(progress * totalChars);
-          if (newCharIndex > currentCharIndex.value) {
-            currentCharIndex.value = newCharIndex;
-          }
-        }
-      });
+      audioContext.src = `/static/audio/${categoryId.value}_${index}.mp3`;
       audioContext.onEnded(() => {
-        common_vendor.index.__f__("log", "at pages/detail/detail.vue:168", "Audio ended");
-        listItems.value[index].status = "played";
-        currentPlayingIndex.value = -1;
-        currentCharIndex.value = -1;
-        stopAudio();
+        markPlayed(index);
       });
-      audioContext.onError((res) => {
-        common_vendor.index.__f__("warn", "at pages/detail/detail.vue:177", "Audio error (file missing?):", res);
+      audioContext.onError(() => {
         simulatePlayback(index);
       });
       audioContext.play();
     };
-    const simulatePlayback = (index) => {
-      common_vendor.index.__f__("log", "at pages/detail/detail.vue:187", "Simulating playback...");
-      const totalChars = listItems.value[index].chars.length;
-      const duration = Math.min(Math.max(totalChars * 200, 2e3), 1e4);
-      const interval = duration / totalChars;
-      let step = 0;
-      progressTimer = setInterval(() => {
-        step++;
-        currentCharIndex.value = step;
-        if (step >= totalChars) {
-          listItems.value[index].status = "played";
-          currentPlayingIndex.value = -1;
-          currentCharIndex.value = -1;
-          if (progressTimer)
-            clearInterval(progressTimer);
-        }
-      }, interval);
-    };
     return (_ctx, _cache) => {
       return {
-        a: common_assets._imports_0$1,
-        b: common_vendor.o(goBack),
-        c: common_vendor.t(pageTitle.value),
-        d: common_vendor.f(listItems.value, (item, index, i0) => {
-          return common_vendor.e({
-            a: common_vendor.f(item.chars, (char, charIndex, i1) => {
-              return {
-                a: common_vendor.t(char),
-                b: charIndex,
-                c: common_vendor.n(getCharClass(index, charIndex))
-              };
-            }),
-            b: currentPlayingIndex.value === index
-          }, currentPlayingIndex.value === index ? {} : {}, {
+        a: common_vendor.o(goBack),
+        b: common_vendor.t(pageTitle.value),
+        c: common_vendor.t(heroSubtitle.value),
+        d: common_vendor.t(leftHeaderTitle.value),
+        e: common_vendor.f(displayRows.value, (row, index, i0) => {
+          return {
+            a: common_vendor.t(row.name),
+            b: common_vendor.t(row.price),
             c: index,
             d: currentPlayingIndex.value === index ? 1 : "",
-            e: item.status === "played" ? 1 : "",
+            e: row.status === "played" ? 1 : "",
             f: common_vendor.o(($event) => playItem(index), index)
-          });
+          };
         })
       };
     };

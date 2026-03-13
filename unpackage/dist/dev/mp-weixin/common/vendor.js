@@ -85,29 +85,9 @@ const def = (obj, key, value) => {
   });
 };
 const looseToNumber = (val) => {
-  const n2 = parseFloat(val);
-  return isNaN(n2) ? val : n2;
+  const n = parseFloat(val);
+  return isNaN(n) ? val : n;
 };
-function normalizeClass(value) {
-  let res = "";
-  if (isString(value)) {
-    res = value;
-  } else if (isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      const normalized = normalizeClass(value[i]);
-      if (normalized) {
-        res += normalized + " ";
-      }
-    }
-  } else if (isObject(value)) {
-    for (const name in value) {
-      if (value[name]) {
-        res += name + " ";
-      }
-    }
-  }
-  return res.trim();
-}
 const toDisplayString = (val) => {
   return isString(val) ? val : val == null ? "" : isArray(val) || isObject(val) && (val.toString === objectToString || !isFunction(val.toString)) ? JSON.stringify(val, replacer, 2) : String(val);
 };
@@ -375,8 +355,8 @@ const E = function() {
 E.prototype = {
   _id: 1,
   on: function(name, callback, ctx) {
-    var e2 = this.e || (this.e = {});
-    (e2[name] || (e2[name] = [])).push({
+    var e = this.e || (this.e = {});
+    (e[name] || (e[name] = [])).push({
       fn: callback,
       ctx,
       _id: this._id
@@ -403,8 +383,8 @@ E.prototype = {
     return this;
   },
   off: function(name, event) {
-    var e2 = this.e || (this.e = {});
-    var evts = e2[name];
+    var e = this.e || (this.e = {});
+    var evts = e[name];
     var liveEvents = [];
     if (evts && event) {
       for (var i = evts.length - 1; i >= 0; i--) {
@@ -415,7 +395,7 @@ E.prototype = {
       }
       liveEvents = evts;
     }
-    liveEvents.length ? e2[name] = liveEvents : delete e2[name];
+    liveEvents.length ? e[name] = liveEvents : delete e[name];
     return this;
   }
 };
@@ -5117,8 +5097,6 @@ function vFor(source, renderItem) {
 }
 const o = (value, key) => vOn(value, key);
 const f = (source, renderItem) => vFor(source, renderItem);
-const e = (target, ...sources) => extend(target, ...sources);
-const n = (value) => normalizeClass(value);
 const t = (val) => toDisplayString(val);
 function createApp$1(rootComponent, rootProps = null) {
   rootComponent && (rootComponent.mpType = "app");
@@ -5258,8 +5236,8 @@ function tryCatch(fn) {
   return function() {
     try {
       return fn.apply(fn, arguments);
-    } catch (e2) {
-      console.error(e2);
+    } catch (e) {
+      console.error(e);
     }
   };
 }
@@ -5710,8 +5688,8 @@ const $once = defineSyncApi(API_ONCE, (name, callback) => {
 const $off = defineSyncApi(API_OFF, (name, callback) => {
   if (!isArray(name))
     name = name ? [name] : [];
-  name.forEach((n2) => {
-    eventBus.off(n2, callback);
+  name.forEach((n) => {
+    eventBus.off(n, callback);
   });
 }, OffProtocol);
 const $emit = defineSyncApi(API_EMIT, (name, ...args) => {
@@ -5723,7 +5701,7 @@ let enabled;
 function normalizePushMessage(message) {
   try {
     return JSON.parse(message);
-  } catch (e2) {
+  } catch (e) {
   }
   return message;
 }
@@ -6466,15 +6444,15 @@ function tryConnectSocket(host2, port, id) {
       });
       resolve(null);
     }, SOCKET_TIMEOUT);
-    socket.onOpen((e2) => {
+    socket.onOpen((e) => {
       clearTimeout(timer);
       resolve(socket);
     });
-    socket.onClose((e2) => {
+    socket.onClose((e) => {
       clearTimeout(timer);
       resolve(null);
     });
-    socket.onError((e2) => {
+    socket.onError((e) => {
       clearTimeout(timer);
       resolve(null);
     });
@@ -6575,7 +6553,7 @@ function formatMessage(type, args) {
       type,
       args: formatArgs(args)
     };
-  } catch (e2) {
+  } catch (e) {
   }
   return {
     type,
@@ -6603,7 +6581,7 @@ function formatArg(arg, depth = 0) {
     case "object":
       try {
         return formatObject(arg, depth);
-      } catch (e2) {
+      } catch (e) {
         return {
           type: "object",
           value: {
@@ -7902,10 +7880,8 @@ const onLoad = /* @__PURE__ */ createLifeCycleHook(
 exports._export_sfc = _export_sfc;
 exports.computed = computed;
 exports.createSSRApp = createSSRApp;
-exports.e = e;
 exports.f = f;
 exports.index = index;
-exports.n = n;
 exports.o = o;
 exports.onLoad = onLoad;
 exports.onUnmounted = onUnmounted;
