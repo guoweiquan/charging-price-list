@@ -1,5 +1,6 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const common_assets = require("../../common/assets.js");
 const common_data = require("../../common/data.js");
 const _sfc_main = {
   __name: "detail",
@@ -24,6 +25,7 @@ const _sfc_main = {
       const projectIds = ["guishang", "chukou", "kaipiao", "mianfei"];
       return projectIds.includes(categoryId.value) ? "申报项目" : "年开票金额";
     });
+    const shouldWrapLeft = (priceText) => categoryId.value === "mianfei" && String(priceText || "").length > 10;
     const formatPrice = (priceText) => {
       const text = (priceText || "").trim();
       if (!text)
@@ -136,18 +138,20 @@ const _sfc_main = {
     };
     return (_ctx, _cache) => {
       return {
-        a: common_vendor.o(goBack),
-        b: common_vendor.t(pageTitle.value),
-        c: common_vendor.t(heroSubtitle.value),
-        d: common_vendor.t(leftHeaderTitle.value),
-        e: common_vendor.f(displayRows.value, (row, index, i0) => {
+        a: common_vendor.o(goBack, "5b"),
+        b: common_assets._imports_0$1,
+        c: common_vendor.t(pageTitle.value),
+        d: common_vendor.t(heroSubtitle.value),
+        e: common_vendor.t(leftHeaderTitle.value),
+        f: common_vendor.f(displayRows.value, (row, index, i0) => {
           return {
             a: common_vendor.t(row.name),
             b: common_vendor.t(row.price),
-            c: index,
-            d: currentPlayingIndex.value === index ? 1 : "",
-            e: row.status === "played" ? 1 : "",
-            f: common_vendor.o(($event) => playItem(index), index)
+            c: shouldWrapLeft(row.price) ? 1 : "",
+            d: index,
+            e: currentPlayingIndex.value === index ? 1 : "",
+            f: row.status === "played" ? 1 : "",
+            g: common_vendor.o(($event) => playItem(index), index)
           };
         })
       };

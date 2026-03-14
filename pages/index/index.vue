@@ -9,7 +9,7 @@
 				<text class="title-company">浙江中税企业管理有限公司</text>
 				<text class="title-main">收费价目表</text>
 				<view class="logo-wrapper">
-					<image class="logo-banner" src="/static/images/logo.png" mode="widthFix"></image>
+					<image class="logo-banner" src="/static/images/logo.jpg" mode="widthFix"></image>
 
 				</view>
 			</view>

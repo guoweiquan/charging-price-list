@@ -93,7 +93,11 @@
 		margin-bottom: 30rpx;
 }
 .hero-icon.data-v-eca06f3c {
-		font-size: 54rpx;
+		display: block;
+		width: 56rpx;
+		height: 56rpx;
+		border-radius: 12rpx;
+		overflow: hidden;
 		margin-bottom: 10rpx;
 }
 .hero-title.data-v-eca06f3c {
@@ -133,10 +137,9 @@
 }
 .table-row.data-v-eca06f3c {
 		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 24rpx 24rpx;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+		align-items: stretch;
+		padding: 0;
+		border-bottom: none;
 }
 .table-row.data-v-eca06f3c:last-child {
 		border-bottom: none;
@@ -150,20 +153,30 @@
 		font-weight: 700;
 		color: rgba(255, 255, 255, 0.72);
 }
+.col-name.data-v-eca06f3c,
+	.col-price.data-v-eca06f3c {
+		width: 50%;
+		box-sizing: border-box;
+		padding: 24rpx 18rpx;
+		white-space: normal;
+		word-break: break-all;
+		overflow-wrap: anywhere;
+}
 .col-name.data-v-eca06f3c {
-		flex: 1;
 		font-size: 30rpx;
 		line-height: 1.4;
 		font-weight: 600;
 		color: #f2f7ff;
-		padding-right: 14rpx;
 }
 .col-price.data-v-eca06f3c {
 		font-size: 30rpx;
 		font-weight: 700;
-		line-height: 1.2;
+		line-height: 1.4;
 		color: #2f9dff;
-		white-space: nowrap;
+		text-align: right;
+}
+.col-price-wrap-left.data-v-eca06f3c {
+		text-align: left;
 }
 .table-row.playing.data-v-eca06f3c {
 		background: rgba(64, 150, 255, 0.08);

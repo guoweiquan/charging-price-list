@@ -13,7 +13,7 @@
 
 		<scroll-view scroll-y class="page-scroll">
 			<view class="hero-card">
-				<view class="hero-icon">📑</view>
+				<image class="hero-icon" src="/static/images/logo_mini.png" mode="aspectFill"></image>
 				<text class="hero-title">{{ pageTitle }}</text>
 				<text class="hero-desc">{{ heroSubtitle }}</text>
 			</view>
@@ -37,7 +37,7 @@
 					@click="playItem(index)"
 				>
 					<text class="col-name">{{ row.name }}</text>
-					<text class="col-price">{{ row.price }}</text>
+					<text class="col-price" :class="{ 'col-price-wrap-left': shouldWrapLeft(row.price) }">{{ row.price }}</text>
 				</view>
 			</view>
 
@@ -75,6 +75,8 @@
 		const projectIds = ['guishang', 'chukou', 'kaipiao', 'mianfei'];
 		return projectIds.includes(categoryId.value) ? '申报项目' : '年开票金额';
 	});
+
+	const shouldWrapLeft = (priceText) => categoryId.value === 'mianfei' && String(priceText || '').length > 10;
 
 	const formatPrice = (priceText) => {
 		const text = (priceText || '').trim();
@@ -310,7 +312,11 @@
 	}
 
 	.hero-icon {
-		font-size: 54rpx;
+		display: block;
+		width: 56rpx;
+		height: 56rpx;
+		border-radius: 12rpx;
+		overflow: hidden;
 		margin-bottom: 10rpx;
 	}
 
@@ -356,15 +362,15 @@
 
 	.table-row {
 		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 24rpx 24rpx;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+		align-items: stretch;
+		padding: 0;
+		border-bottom: none;
 	}
 
 	.table-row:last-child {
 		border-bottom: none;
 	}
+
 
 	.table-head {
 		background: rgba(64, 150, 255, 0.08);
@@ -377,21 +383,33 @@
 		color: rgba(255, 255, 255, 0.72);
 	}
 
+	.col-name,
+	.col-price {
+		width: 50%;
+		box-sizing: border-box;
+		padding: 24rpx 18rpx;
+		white-space: normal;
+		word-break: break-all;
+		overflow-wrap: anywhere;
+	}
+
 	.col-name {
-		flex: 1;
 		font-size: 30rpx;
 		line-height: 1.4;
 		font-weight: 600;
 		color: #f2f7ff;
-		padding-right: 14rpx;
 	}
 
 	.col-price {
 		font-size: 30rpx;
 		font-weight: 700;
-		line-height: 1.2;
+		line-height: 1.4;
 		color: #2f9dff;
-		white-space: nowrap;
+		text-align: right;
+	}
+
+	.col-price-wrap-left {
+		text-align: left;
 	}
 
 	.table-row.playing {
